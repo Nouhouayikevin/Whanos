@@ -1,0 +1,5 @@
+ssh root@178.62.222.96 #pour node1
+ssh root@164.90.202.159 #pour node2
+ssh root@134.209.197.7 #pour master
+
+mot de passe des vm kev@password

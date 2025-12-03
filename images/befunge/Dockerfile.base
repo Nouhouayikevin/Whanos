@@ -1,0 +1,25 @@
+FROM debian:12-slim
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        bash \
+        curl \
+        git \
+        gcc \
+        make \
+        libc6-dev \
+        ca-certificates && \
+    git clone https://github.com/catseye/Befunge-93.git /tmp/befunge && \
+    cd /tmp/befunge && \
+    make && \
+    cp bin/bef /usr/local/bin/befunge93 && \
+    cd / && \
+    rm -rf /tmp/befunge && \
+    apt-get remove -y git gcc make libc6-dev && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+SHELL ["/bin/bash", "-c"]

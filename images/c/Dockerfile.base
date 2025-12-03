@@ -1,0 +1,12 @@
+FROM alpine:3.19
+
+WORKDIR /app
+
+RUN apk add --no-cache \
+        bash \
+        gcc \
+        make \
+        musl-dev && \
+    rm -rf /var/cache/apk/*
+
+SHELL ["/bin/bash", "-c"]

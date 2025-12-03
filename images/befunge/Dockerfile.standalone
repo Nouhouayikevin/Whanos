@@ -1,0 +1,31 @@
+FROM debian:12-slim AS builder
+
+WORKDIR /build
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        git \
+        gcc \
+        make \
+        libc6-dev \
+        ca-certificates && \
+    git clone https://github.com/catseye/Befunge-93.git /tmp/befunge && \
+    cd /tmp/befunge && \
+    make && \
+    cp bin/bef /usr/local/bin/befunge93 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+FROM debian:12-slim
+
+
+WORKDIR /app
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        bash \
+        curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+COPY --from=builder /usr/local/bin/befunge93 /usr/local/bin/befunge93
+COPY app/*.bf .
+SHELL ["/bin/bash", "-c"]
+CMD ["befunge93", "main.bf"]

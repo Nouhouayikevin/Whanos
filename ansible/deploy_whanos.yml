@@ -1,0 +1,465 @@
+---
+# Whanos - Déploiement complet infrastructure
+# 3 VMs: Jenkins/Registry/K3s-master + 2 K3s workers
+
+- name: "Phase 1: Prérequis système"
+  hosts: all
+  become: yes
+  gather_facts: yes
+  tasks:
+    - name: Trouver tous fichiers Docker dans sources.list.d
+      find:
+        paths: /etc/apt/sources.list.d/
+        patterns: '*docker*'
+      register: docker_sources
+
+    - name: Supprimer tous fichiers Docker sources
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ docker_sources.files }}"
+      when: docker_sources.files | length > 0
+
+    - name: Nettoyer anciennes configurations Docker
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/apt/sources.list.d/docker.list
+        - /etc/apt/keyrings/docker.gpg
+        - /etc/apt/keyrings/docker.asc
+      ignore_errors: yes
+
+    - name: Mise à jour packages
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Attendre libération verrou APT
+      shell: while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 1; done
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Installation dépendances
+      apt:
+        name:
+          - curl
+          - wget
+          - git
+          - ca-certificates
+          - gnupg
+          - apt-transport-https
+          - software-properties-common
+          - python3-pip
+        state: present
+      retries: 3
+      delay: 10
+      register: apt_result
+      until: apt_result is succeeded
+
+    - name: Désactiver swap
+      shell: |
+        swapoff -a
+        sed -i '/swap/d' /etc/fstab
+      ignore_errors: yes
+
+    - name: Créer répertoire keyrings
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Télécharger clé GPG Docker
+      get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+        force: yes
+
+    - name: Supprimer docker.list avant recréation
+      file:
+        path: /etc/apt/sources.list.d/docker.list
+        state: absent
+
+    - name: Recréer repo Docker (proprement)
+      shell: |
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list
+      changed_when: true
+
+    - name: Rafraîchir cache APT après config Docker
+      apt:
+        update_cache: yes
+
+    - name: Installer Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+
+    - name: Démarrer Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+- name: "Phase 2: Docker Registry"
+  hosts: jenkins
+  become: yes
+  handlers:
+    - name: Redémarrer Docker
+      systemd:
+        name: docker
+        state: restarted
+  tasks:
+    - name: Créer répertoire registry
+      file:
+        path: /var/lib/whanos-registry
+        state: directory
+
+    - name: Configurer Docker daemon pour registry insecure
+      copy:
+        dest: /etc/docker/daemon.json
+        content: |
+          {
+            "insecure-registries": ["{{ ansible_host }}:5000"]
+          }
+      notify: Redémarrer Docker
+
+    - name: Attendre Docker
+      wait_for:
+        timeout: 5
+
+    - name: Trouver processus sur port 5000
+      shell: lsof -ti :5000 || echo ""
+      register: port_5000_process
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Tuer processus sur port 5000 si existe
+      shell: kill -9 {{ port_5000_process.stdout }}
+      when: port_5000_process.stdout != ""
+      ignore_errors: yes
+
+    - name: Arrêter tous containers registry Docker
+      shell: docker ps -a | grep registry | awk '{print $1}' | xargs -r docker rm -f
+      ignore_errors: yes
+
+    - name: Lancer Registry
+      docker_container:
+        name: whanos-registry
+        image: registry:2
+        state: started
+        restart_policy: unless-stopped
+        ports:
+          - "5000:5000"
+        volumes:
+          - /var/lib/whanos-registry:/var/lib/registry
+
+    - name: Attendre registry
+      wait_for:
+        port: 5000
+        delay: 5
+
+- name: "Phase 3: K3s Master"
+  hosts: k3s_master
+  become: yes
+  vars:
+    registry_ip: "{{ ansible_host }}"
+  tasks:
+    - name: Créer config K3s
+      file:
+        path: /etc/rancher/k3s
+        state: directory
+
+    - name: Config registry insecure
+      copy:
+        dest: /etc/rancher/k3s/registries.yaml
+        content: |
+          mirrors:
+            "{{ registry_ip }}:5000":
+              endpoint:
+                - "http://{{ registry_ip }}:5000"
+          configs:
+            "{{ registry_ip }}:5000":
+              tls:
+                insecure_skip_verify: true
+
+    - name: Installer K3s master
+      shell: curl -sfL https://get.k3s.io | sh -s - server --write-kubeconfig-mode=644 --disable=traefik
+      args:
+        creates: /usr/local/bin/k3s
+
+    - name: Attendre K3s
+      wait_for:
+        port: 6443
+        delay: 10
+
+    - name: Récupérer token
+      slurp:
+        src: /var/lib/rancher/k3s/server/node-token
+      register: k3s_token
+
+    - name: Sauvegarder token et IP dans fichier
+      copy:
+        content: |
+          k3s_master_token: "{{ k3s_token.content | b64decode | trim }}"
+          k3s_master_ip: "{{ ansible_host }}"
+        dest: /tmp/k3s_cluster_info.yml
+        mode: '0644'
+      delegate_to: localhost
+      become: no
+      run_once: true
+
+- name: "Phase 4: K3s Workers"
+  hosts: k3s_workers
+  become: yes
+  tasks:
+    - name: Vérifier fichier cluster info
+      stat:
+        path: /tmp/k3s_cluster_info.yml
+      delegate_to: localhost
+      become: no
+      register: cluster_info_file
+      run_once: true
+
+    - name: Charger infos cluster
+      include_vars:
+        file: /tmp/k3s_cluster_info.yml
+      delegate_to: localhost
+      become: no
+      when: cluster_info_file.stat.exists
+      run_once: true
+
+    - name: Fail si pas d'info cluster
+      fail:
+        msg: "Le fichier /tmp/k3s_cluster_info.yml n'existe pas. La Phase 3 (K3s Master) a probablement échoué."
+      when: not cluster_info_file.stat.exists
+
+    - name: Récupérer IP registry
+      set_fact:
+        registry_ip: "{{ hostvars[groups['jenkins'][0]]['ansible_host'] }}"
+    - name: Créer config K3s
+      file:
+        path: /etc/rancher/k3s
+        state: directory
+
+    - name: Config registry insecure
+      copy:
+        dest: /etc/rancher/k3s/registries.yaml
+        content: |
+          mirrors:
+            "{{ registry_ip }}:5000":
+              endpoint:
+                - "http://{{ registry_ip }}:5000"
+          configs:
+            "{{ registry_ip }}:5000":
+              tls:
+                insecure_skip_verify: true
+
+    - name: Installer K3s worker
+      shell: curl -sfL https://get.k3s.io | K3S_URL=https://{{ k3s_master_ip }}:6443 K3S_TOKEN={{ k3s_master_token }} sh -s - --with-node-id
+      args:
+        creates: /usr/local/bin/k3s
+
+- name: "Phase 5: Vérifier cluster"
+  hosts: k3s_master
+  become: yes
+  tasks:
+    - name: Attendre 3 nodes Ready
+      shell: KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get nodes --no-headers | grep -v NotReady | wc -l
+      register: ready_nodes
+      until: ready_nodes.stdout | int == 3
+      retries: 12
+      delay: 10
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+    - name: Afficher nodes
+      shell: KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get nodes
+      register: nodes_output
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+    - debug:
+        msg: "{{ nodes_output.stdout_lines }}"
+
+- name: "Phase 6: Déployer Jenkins"
+  hosts: jenkins
+  become: yes
+  tasks:
+    - name: Créer répertoires
+      file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - /opt/whanos
+        - /opt/whanos/jenkins
+        - /var/lib/jenkins-data
+
+    - name: Copier configs Jenkins
+      copy:
+        src: "{{ playbook_dir }}/../jenkins/{{ item }}"
+        dest: /opt/whanos/jenkins/{{ item }}
+      loop:
+        - config.yml
+        - job_dsl.groovy
+        - entrypoint.sh
+
+    - name: Rendre entrypoint.sh exécutable
+      file:
+        path: /opt/whanos/jenkins/entrypoint.sh
+        mode: '0755'
+
+    - name: Copier init scripts
+      copy:
+        src: "{{ playbook_dir }}/../jenkins/init.groovy.d/"
+        dest: /opt/whanos/jenkins/init.groovy.d/
+
+    - name: Copier images
+      copy:
+        src: "{{ playbook_dir }}/../images/"
+        dest: /opt/whanos/images/
+
+    - name: Copier helm
+      copy:
+        src: "{{ playbook_dir }}/../helm/"
+        dest: /opt/whanos/helm/
+
+    - name: Copier kubeconfig
+      copy:
+        src: /etc/rancher/k3s/k3s.yaml
+        dest: /opt/whanos/kubeconfig
+        remote_src: yes
+
+    - name: Modifier kubeconfig
+      replace:
+        path: /opt/whanos/kubeconfig
+        regexp: '127\.0\.0\.1'
+        replace: '{{ ansible_host }}'
+
+    - name: Copier Dockerfile Jenkins
+      copy:
+        src: "{{ playbook_dir }}/../Dockerfile.jenkins"
+        dest: /opt/whanos/Dockerfile.jenkins
+
+    - name: Créer plugins.txt
+      copy:
+        dest: /opt/whanos/plugins.txt
+        content: |
+          configuration-as-code:latest
+          job-dsl:latest
+          git:latest
+          timestamper:latest
+
+    - name: Build Jenkins image
+      docker_image:
+        name: whanos-jenkins:vm
+        source: build
+        build:
+          path: /opt/whanos
+          dockerfile: Dockerfile.jenkins
+        state: present
+
+    - name: Arrêter service Jenkins système s'il existe
+      systemd:
+        name: jenkins
+        state: stopped
+        enabled: no
+      ignore_errors: yes
+
+    - name: Trouver processus sur port 8080
+      shell: lsof -ti :8080
+      register: pid_8080
+      ignore_errors: yes
+
+    - name: Tuer processus sur port 8080 si existe
+      shell: kill -9 {{ pid_8080.stdout }}
+      when: pid_8080.stdout != ""
+      ignore_errors: yes
+
+    - name: Arrêter tous containers Jenkins Docker
+      shell: docker ps -a | grep -i jenkins | awk '{print $1}' | xargs -r docker rm -f
+      ignore_errors: yes
+
+    - name: Nettoyer les proxy Docker
+      shell: docker network prune -f
+      ignore_errors: yes
+
+    - name: Redémarrer Docker pour libérer les ports
+      systemd:
+        name: docker
+        state: restarted
+
+    - name: Attendre démarrage complet Docker
+      pause:
+        seconds: 10
+
+    - name: Vérifier que Docker est actif
+      systemd:
+        name: docker
+        state: started
+
+    - name: Debug - Vérifier ce qui utilise le port 8080
+      shell: |
+        echo "=== Processus sur port 8080 ==="
+        lsof -i :8080 || echo "Aucun processus"
+        echo "=== Containers Docker ==="
+        docker ps -a
+      register: debug_port
+      ignore_errors: yes
+
+    - name: Afficher debug
+      debug:
+        var: debug_port.stdout_lines
+
+    - name: Lancer Jenkins
+      docker_container:
+        name: whanos-jenkins
+        image: whanos-jenkins:vm
+        state: started
+        restart_policy: unless-stopped
+        privileged: yes
+        user: root
+        ports:
+          - "8080:8080"
+          - "50000:50000"
+        volumes:
+          - /var/lib/jenkins-data:/var/jenkins_home
+          - /var/run/docker.sock:/var/run/docker.sock
+          - /opt/whanos/jenkins/config.yml:/var/jenkins_home/casc_configs/config.yml:ro
+          - /opt/whanos/jenkins/job_dsl.groovy:/var/jenkins_home/casc_configs/job_dsl.groovy:ro
+          - /opt/whanos/jenkins/init.groovy.d:/var/jenkins_home/init.groovy.d:ro
+          - /opt/whanos/images:/var/jenkins_home/whanos_images:ro
+          - /opt/whanos/helm:/var/jenkins_home/helm:ro
+          - /opt/whanos/kubeconfig:/var/jenkins_home/.kube/config:ro
+          - /opt/whanos/jenkins/entrypoint.sh:/entrypoint-wrapper.sh:ro
+        entrypoint: ["/entrypoint-wrapper.sh"]
+        env:
+          JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"
+          CASC_JENKINS_CONFIG: "/var/jenkins_home/casc_configs/config.yml"
+          KUBECONFIG: "/var/jenkins_home/.kube/config"
+          ADMIN_PASSWORD: "{{ lookup('env', 'ADMIN_PASSWORD') | default('admin123', true) }}"
+          GITHUB_USERNAME: "{{ lookup('env', 'GITHUB_USERNAME') | default('', true) }}"
+          GITHUB_TOKEN: "{{ lookup('env', 'GITHUB_TOKEN') | default('', true) }}"
+          REGISTRY_URL: "{{ lookup('env', 'REGISTRY_URL') | default('localhost:5000', true) }}"
+          DOCKER_HUB_USERNAME: "{{ lookup('env', 'DOCKER_HUB_USERNAME') | default('', true) }}"
+          DOCKER_HUB_TOKEN: "{{ lookup('env', 'DOCKER_HUB_TOKEN') | default('', true) }}"
+
+    - name: Attendre Jenkins
+      wait_for:
+        port: 8080
+        delay: 30
+        timeout: 300
+
+- name: "Phase 7: Résumé"
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - debug:
+        msg:
+          - "✅ DÉPLOIEMENT WHANOS TERMINÉ"
+          - "Registry: http://{{ hostvars[groups['jenkins'][0]]['ansible_host'] }}:5000"
+          - "Jenkins: http://{{ hostvars[groups['jenkins'][0]]['ansible_host'] }}:8080 (admin/admin123)"
+          - "K3s Master: {{ hostvars[groups['k3s_master'][0]]['ansible_host'] }}"

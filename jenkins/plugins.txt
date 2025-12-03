@@ -1,0 +1,43 @@
+# Core plugins - keep minimal list; plugin manager will resolve dependencies
+configuration-as-code
+job-dsl
+git
+workflow-aggregator
+credentials
+
+# Common API / dependency plugins (explicit so plugin manager fetches compatible versions)
+commons-lang3-api
+commons-text-api
+ionicons-api
+bouncycastle-api
+plugin-util-api
+jsoup
+
+# Pipeline related pieces
+workflow-api
+workflow-cps
+workflow-durable-task-step
+pipeline-groovy-lib
+pipeline-model-api
+pipeline-stage-step
+pipeline-build-step
+pipeline-multibranch
+pipeline-github-lib
+
+# SCM / branching / job utilities
+scm-api
+branch-api
+credentials-binding
+
+# Folders / job organization
+cloudbees-folder
+matrix-project
+resource-disposer
+
+# Misc useful plugins
+token-macro
+junit
+bootstrap5-api
+font-awesome-api
+plugin-util-api
+

@@ -1,0 +1,44 @@
+FROM jenkins/jenkins:2.533-jdk17
+
+USER root
+
+# Install Docker CLI (binaire statique, pas de apt)
+RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-27.4.1.tgz | \
+    tar xz --strip-components=1 -C /usr/local/bin docker/docker && \
+    chmod +x /usr/local/bin/docker
+
+# Install kubectl
+RUN curl -fsSL "https://dl.k8s.io/release/v1.29.0/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl && \
+    chmod +x /usr/local/bin/kubectl
+
+# Install Helm
+RUN curl -fsSL https://get.helm.sh/helm-v3.16.4-linux-amd64.tar.gz | \
+    tar xz --strip-components=1 -C /usr/local/bin linux-amd64/helm && \
+    chmod +x /usr/local/bin/helm
+
+# Add jenkins user to docker group (will match host docker group via socket)
+RUN groupadd -g 999 docker 2>/dev/null || true && \
+    usermod -aG docker jenkins
+
+USER jenkins
+
+# Skip setup wizard
+ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false"
+
+# Install plugins (sans versions spécifiques pour éviter les 404)
+RUN jenkins-plugin-cli --plugins \
+    configuration-as-code \
+    job-dsl \
+    git \
+    docker-workflow \
+    cloudbees-folder \
+    workflow-aggregator \
+    kubernetes \
+    kubernetes-cli \
+    credentials \
+    credentials-binding \
+    matrix-auth \
+    github \
+    timestamper \
+    ansicolor \
+    build-timeout

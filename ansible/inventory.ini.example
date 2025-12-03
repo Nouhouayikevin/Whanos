@@ -1,0 +1,28 @@
+# Whanos Infrastructure Inventory
+# 3 VMs Ubuntu (DigitalOcean)
+
+[all:vars]
+ansible_user=
+ansible_password=
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+
+# VM pour Jenkins + Registry
+[jenkins]
+jenkins-vm ansible_host=
+
+# Cluster K3s
+[k3s_master]
+k3s-master ansible_host=
+
+[k3s_workers]
+k3s-worker1 ansible_host=
+k3s-worker2 ansible_host=
+
+# Groupes combinés
+[k3s_cluster:children]
+k3s_master
+k3s_workers
+
+[infrastructure:children]
+jenkins
+k3s_cluster

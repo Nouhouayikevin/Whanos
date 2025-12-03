@@ -1,0 +1,22 @@
+{{- if .Values.deployment.ports }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.nameOverride | default .Release.Name }}
+  labels:
+    app: {{ .Values.nameOverride | default .Release.Name }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    release: {{ .Release.Name }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  {{- range .Values.deployment.ports }}
+  - port: {{ . }}
+    targetPort: {{ . }}
+    protocol: TCP
+    name: port-{{ . }}
+  {{- end }}
+  selector:
+    app: {{ .Values.nameOverride | default .Release.Name }}
+    release: {{ .Release.Name }}
+{{- end }}

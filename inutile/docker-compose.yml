@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # Docker registry local pour stocker les images
+  registry:
+    image: registry:2
+    container_name: whanos-registry
+    ports:
+      - "5000:5000"
+    volumes:
+      - registry-data:/var/lib/registry
+    restart: unless-stopped
+    networks:
+      - default
+      - kind
+
+  # Jenkins avec Docker-in-Docker
+  jenkins:
+    build:
+      context: .
+      dockerfile: Dockerfile.jenkins
+    container_name: whanos-jenkins
+    privileged: true
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      # Jenkins home persistant
+      - jenkins-data:/var/jenkins_home
+      # Docker socket pour Docker-in-Docker
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Configuration JCasC
+      - ./jenkins/config.yml:/var/jenkins_home/casc_configs/config.yml:ro
+      # Job DSL script
+      - ./jenkins/job_dsl.groovy:/var/jenkins_home/casc_configs/job_dsl.groovy:ro
+      # Init scripts
+      - ./jenkins/init.groovy.d:/var/jenkins_home/init.groovy.d:ro
+      # Whanos images (Dockerfiles)
+      - ./images:/var/jenkins_home/whanos_images:ro
+      # Helm charts
+      - ./helm:/var/jenkins_home/helm:ro
+      # Mount host kubeconfig (read-only) pour accès cluster K8s
+      - ${HOME}/.kube:/host-kube:ro
+      # Script entrypoint pour setup kubeconfig automatique
+      - ./jenkins/entrypoint.sh:/entrypoint-wrapper.sh:ro
+    entrypoint: ["/entrypoint-wrapper.sh"]
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+      - CASC_JENKINS_CONFIG=/var/jenkins_home/casc_configs/config.yml
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - GITHUB_USERNAME=${GITHUB_USERNAME:-}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      # Kubeconfig sera généré par le script init
+      - KUBECONFIG=/var/jenkins_home/.kube/config
+    depends_on:
+      - registry
+    restart: unless-stopped
+    networks:
+      - default
+      - kind
+
+volumes:
+  jenkins-data:
+  registry-data:
+
+networks:
+  default:
+  kind:
+    external: true
+    name: kind

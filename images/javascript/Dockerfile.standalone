@@ -1,0 +1,17 @@
+FROM node:20.9-alpine
+
+WORKDIR /app
+
+RUN apk add --no-cache bash && \
+    rm -rf /var/cache/apk/*
+
+COPY package*.json ./
+
+RUN npm install --omit=dev && \
+    npm cache clean --force
+
+COPY . .
+
+SHELL ["/bin/bash", "-c"]
+
+CMD ["node", "."]

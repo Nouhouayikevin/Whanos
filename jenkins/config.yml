@@ -1,0 +1,80 @@
+jenkins:
+  systemMessage: "Whanos - Automatically deploy (nearly) anything with a snap 🚀"
+  numExecutors: 2
+  mode: NORMAL
+  
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "${ADMIN_PASSWORD:-admin}"
+          
+  authorizationStrategy:
+    globalMatrix:
+      permissions:
+        - "USER:Overall/Administer:admin"
+        - "USER:Overall/Read:admin"
+        - "USER:Job/Read:admin"
+        - "USER:Job/Build:admin"
+        - "USER:Job/Configure:admin"
+        - "USER:Job/Create:admin"
+        - "USER:Job/Delete:admin"
+        - "USER:Job/Discover:admin"
+        - "USER:Job/Move:admin"
+        - "USER:Job/Workspace:admin"
+        - "USER:Job/Cancel:admin"
+        - "USER:Run/Delete:admin"
+        - "USER:Run/Update:admin"
+        - "USER:Run/Replay:admin"
+        - "USER:View/Configure:admin"
+        - "USER:View/Create:admin"
+        - "USER:View/Delete:admin"
+        - "USER:View/Read:admin"
+        - "USER:com.cloudbees.plugins.credentials.CredentialsProvider.Create:admin"
+        - "USER:com.cloudbees.plugins.credentials.CredentialsProvider.Delete:admin"
+        - "USER:com.cloudbees.plugins.credentials.CredentialsProvider.ManageDomains:admin"
+        - "USER:com.cloudbees.plugins.credentials.CredentialsProvider.Update:admin"
+        - "USER:com.cloudbees.plugins.credentials.CredentialsProvider.View:admin"
+        - "USER:Agent/Build:admin"
+        - "USER:Agent/Configure:admin"
+        - "USER:Agent/Connect:admin"
+        - "USER:Agent/Create:admin"
+        - "USER:Agent/Delete:admin"
+        - "USER:Agent/Disconnect:admin"
+        - "USER:SCM/Tag:admin"
+
+# Credentials en dehors de jenkins:
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - usernamePassword:
+              scope: GLOBAL
+              id: "github-credentials"
+              username: "${GITHUB_USERNAME:-}"
+              password: "${GITHUB_TOKEN:-}"
+              description: "GitHub credentials for private repositories"
+          - usernamePassword:
+              scope: GLOBAL
+              id: "dockerhub-credentials"
+              username: "${DOCKER_HUB_USERNAME:-}"
+              password: "${DOCKER_HUB_TOKEN:-}"
+              description: "Docker Hub credentials for pushing images"
+
+# Configuration automatique des jobs via Job DSL
+# jobs:
+#   - file: /var/jenkins_home/casc_configs/job_dsl.groovy
+
+unclassified:
+  location:
+    url: "http://localhost:8080/"
+  globalLibraries:
+    libraries: []
+  
+security:
+  scriptApproval:
+    approvedSignatures:
+      - "method groovy.lang.Binding getVariables"
+      - "method java.lang.String replaceAll java.lang.String java.lang.String"
+      - "staticMethod org.codehaus.groovy.runtime.DefaultGroovyMethods println java.lang.Object java.lang.Object"

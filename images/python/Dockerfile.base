@@ -1,0 +1,10 @@
+FROM python:3.12-alpine
+
+WORKDIR /app
+
+RUN apk add --no-cache bash && \
+    python -m ensurepip --upgrade && \
+    pip install --no-cache-dir --upgrade pip setuptools && \
+    rm -rf /root/.cache
+
+SHELL ["/bin/bash", "-c"]

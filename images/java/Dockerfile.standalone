@@ -1,0 +1,22 @@
+FROM eclipse-temurin:21-jdk-alpine AS builder
+
+
+WORKDIR /app
+RUN apk add --no-cache bash maven && \
+    rm -rf /var/cache/apk/*
+COPY app/pom.xml ./
+RUN mvn dependency:go-offline -B
+COPY app ./
+RUN mvn package -DskipTests && \
+    rm -rf /root/.m2/repository
+
+
+FROM eclipse-temurin:21-jre-alpine
+
+
+WORKDIR /app
+RUN apk add --no-cache bash && \
+    rm -rf /var/cache/apk/*
+COPY --from=builder /app/target/*.jar app.jar
+SHELL ["/bin/bash", "-c"]
+CMD ["java", "-jar", "app.jar"]

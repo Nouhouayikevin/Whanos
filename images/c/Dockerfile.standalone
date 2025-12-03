@@ -1,0 +1,21 @@
+FROM alpine:3.19 AS builder
+
+WORKDIR /app
+RUN apk add --no-cache \
+        bash \
+        gcc \
+        make \
+        musl-dev && \
+    rm -rf /var/cache/apk/*
+COPY . .
+RUN make
+
+FROM alpine:3.19
+
+
+WORKDIR /app
+RUN apk add --no-cache bash && \
+    rm -rf /var/cache/apk/*
+COPY --from=builder /app/compiled-app /app/compiled-app
+SHELL ["/bin/bash", "-c"]
+CMD ["/app/compiled-app"]

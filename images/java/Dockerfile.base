@@ -1,0 +1,9 @@
+FROM eclipse-temurin:21-jdk-alpine
+
+WORKDIR /app
+
+RUN apk add --no-cache bash maven && \
+    rm -rf /var/cache/apk/* && \
+    rm -rf /root/.m2/repository
+
+SHELL ["/bin/bash", "-c"]

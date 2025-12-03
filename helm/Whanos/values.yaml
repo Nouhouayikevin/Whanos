@@ -1,0 +1,31 @@
+# Default values for Whanos applications
+# These can be overridden by whanos.yml in the project repository
+
+# Image configuration
+image:
+  repository: ""  # Set by Jenkins (e.g., localhost:5000/myapp)
+  tag: ""         # Set by Jenkins (e.g., build number)
+  pullPolicy: IfNotPresent
+
+# Application name
+nameOverride: ""
+
+# Deployment configuration
+deployment:
+  replicas: 1
+  resources: {}
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 64Mi
+  ports: []
+    # - 8080
+    # - 3000
+
+# Service configuration
+service:
+  type: NodePort  # Can be LoadBalancer, NodePort, or ClusterIP
+  # For NodePort: ports will be exposed on each node on a random port (30000-32767)
+  # For LoadBalancer: requires cloud provider or MetalLB
