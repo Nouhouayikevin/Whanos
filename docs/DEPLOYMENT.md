@@ -118,7 +118,7 @@ REGISTRY_URL=YOUR_MASTER_VM_IP:5000
 # Optional but recommended for public image hosting
 DOCKER_HUB_USERNAME=your_dockerhub_username
 # Generate token at: https://hub.docker.com/settings/security
-DOCKER_HUB_TOKEN_HERE=dckr_pat_your_dockerhub_access_token
+DOCKER_HUB_TOKEN=dckr_pat_your_dockerhub_access_token
 ```
 
 **Security Best Practices:**
