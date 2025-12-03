@@ -38,7 +38,7 @@ Before deploying Whanos, ensure you have:
 ### 1. Clone the Repository
 
 ```bash
-git clone <your-whanos-repo>
+git clone git@github.com:Nouhouayikevin/Whanos.git
 cd whanos
 ```
 

@@ -50,7 +50,7 @@ Perfect for teams wanting **GitOps-style automation** without complex CI/CD setu
 
 ```bash
 # Clone repository
-git clone <your-repo-url>
+git clone git@github.com:Nouhouayikevin/Whanos.git
 cd whanos
 
 # Configure environment
