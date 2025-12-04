@@ -17,21 +17,21 @@
 
 **Whanos** is a powerful DevOps infrastructure that combines Ansible, Jenkins, Docker, and Kubernetes to provide automated application deployment. Simply push your code to a Git repository, and Whanos handles the rest:
 
-1. 🔍 **Detects** your application's technology
-2. 🏗️ **Builds** a Docker image using language-specific base images
-3. 📦 **Pushes** to both local registry and Docker Hub
-4. 🚀 **Deploys** to a Kubernetes cluster (if configured)
+1. **Detects** your application's technology
+2. **Builds** a Docker image using language-specific base images
+3. **Pushes** to both local registry and Docker Hub
+4. **Deploys** to a Kubernetes cluster (if configured)
 
 Perfect for teams wanting **GitOps-style automation** without complex CI/CD setup.
 
 ## ✨ Features
 
-- 🌐 **Multi-language Support:** Python, JavaScript, Java, C, Befunge
-- 🤖 **Automatic Detection:** Recognizes technology from repository structure
-- 🐳 **Dual Registry:** Local registry + Docker Hub backup
-- ☸️ **Kubernetes Ready:** Built-in K3s cluster with Helm deployments
-- 🔒 **Secure:** Credentials management via Jenkins Configuration as Code
-- 📊 **Observable:** Full build logs and deployment tracking
+- **Multi-language Support:** Python, JavaScript, Java, C, Befunge
+- **Automatic Detection:** Recognizes technology from repository structure
+- **Dual Registry:** Local registry + Docker Hub backup
+- **Kubernetes Ready:** Built-in K3s cluster with Helm deployments
+- **Secure:** Credentials management via Jenkins Configuration as Code
+- **Observable:** Full build logs and deployment tracking
 - ⚡ **Fast:** ~15 minute infrastructure deployment
 
 ## � Quick Start
@@ -44,7 +44,7 @@ Perfect for teams wanting **GitOps-style automation** without complex CI/CD setu
 - **Local machine** with Ansible 2.9+
 - **Root SSH access** to all VMs
 
-## 🔧 Installation
+## Installation
 
 ### 1. Clone and Configure
 
@@ -99,14 +99,14 @@ chmod +x deploy.sh
 ```
 
 **What gets deployed:**
-- ✅ Docker Engine on all VMs
-- ✅ K3s cluster (1 master + 2 workers)
-- ✅ Docker Registry on port 5000
-- ✅ Jenkins with custom configuration
-- ✅ Base images for all supported languages
-- ✅ Jenkins jobs for building and deploying
+- Docker Engine on all VMs
+- K3s cluster (1 master + 2 workers)
+- Docker Registry on port 5000
+- Jenkins with custom configuration
+- Base images for all supported languages
+- Jenkins jobs for building and deploying
 
-## 🎯 Usage
+## Usage
 
 ### Access Jenkins
 
@@ -172,7 +172,7 @@ Jenkins will automatically deploy to Kubernetes!
 | C | `Makefile` | [whanos_example_apps/c-hello-world](whanos_example_apps/c-hello-world) |
 | Befunge | `app/main.bf` | [whanos_example_apps/befunge-hello-world](whanos_example_apps/befunge-hello-world) |
 
-## 🏗️ Architecture
+##  Architecture
 
 ```
 ┌─────────────┐
@@ -203,7 +203,7 @@ Jenkins will automatically deploy to Kubernetes!
 - **K3s:** Lightweight Kubernetes cluster
 - **Helm:** Application deployment templating
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 whanos/
@@ -223,7 +223,7 @@ whanos/
 │   ├── c/
 │   └── befunge/
 ├── whanos_example_apps/     # Example applications
-├── docs/                    # 📚 Complete documentation
+├── docs/                    # Complete documentation
 │   ├── USER_GUIDE.md       # Getting started guide
 │   ├── ARCHITECTURE.md     # Technical deep dive
 │   ├── DEPLOYMENT.md       # Step-by-step deployment
@@ -234,26 +234,26 @@ whanos/
 └── .env.example            # Environment variables template
 ```
 
-## 📚 Documentation
+## Documentation
 
 **Complete documentation is available in the [`docs/`](docs/) directory:**
 
-- 🚀 **[User Guide](docs/USER_GUIDE.md)** - Start here for deployment and usage
-- 🏗️ **[Architecture Overview](docs/ARCHITECTURE.md)** - System design and components
-- 📋 **[Deployment Guide](docs/DEPLOYMENT.md)** - Detailed installation steps
-- ⚙️ **[Configuration Reference](docs/CONFIGURATION.md)** - All configuration options
-- 🤖 **[Ansible Documentation](docs/ANSIBLE.md)** - Playbook technical details
-- 🔧 **[Jenkins Documentation](docs/JENKINS.md)** - Jenkins setup and jobs
+- **[User Guide](docs/USER_GUIDE.md)** - Start here for deployment and usage
+- **[Architecture Overview](docs/ARCHITECTURE.md)** - System design and components
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Detailed installation steps
+- **[Configuration Reference](docs/CONFIGURATION.md)** - All configuration options
+- **[Ansible Documentation](docs/ANSIBLE.md)** - Playbook technical details
+- **[Jenkins Documentation](docs/JENKINS.md)** - Jenkins setup and jobs
 
-## 🔒 Security Best Practices
+## Security Best Practices
 
-- ⚠️ **Never commit `.env`** - Contains sensitive credentials
-- 🔑 Use **SSH keys** instead of passwords for production
-- 🔐 Rotate **GitHub and Docker Hub tokens** regularly
-- 🛡️ Use **ansible-vault** for encrypting `inventory.ini`
-- 🔒 Configure **firewall rules** on VMs (ports 8080, 5000, 6443)
+- **Never commit `.env`** - Contains sensitive credentials
+- Use **SSH keys** instead of passwords for production
+- Rotate **GitHub and Docker Hub tokens** regularly
+- Use **ansible-vault** for encrypting `inventory.ini`
+- Configure **firewall rules** on VMs (ports 8080, 5000, 6443)
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Quick Checks
 
@@ -282,7 +282,7 @@ ssh root@MASTER_IP "kubectl get pods"
 
 **For detailed troubleshooting**, see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
-## 🎯 Example Applications
+## Example Applications
 
 Check [`whanos_example_apps/`](whanos_example_apps/) for ready-to-deploy examples:
 
@@ -294,7 +294,7 @@ Check [`whanos_example_apps/`](whanos_example_apps/) for ready-to-deploy example
 
 Each includes complete source code and optional `whanos.yml` configuration.
 
-## 🤝 Contributing
+## Contributing
 
 This project is part of the **Epitech DevOps curriculum** (G-DOP-500).
 
@@ -304,7 +304,7 @@ This project is part of the **Epitech DevOps curriculum** (G-DOP-500).
 - Container orchestration with Kubernetes
 - Multi-language application support
 
-## 📝 License
+## License
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
