@@ -32,7 +32,7 @@ Perfect for teams wanting **GitOps-style automation** without complex CI/CD setu
 - **Kubernetes Ready:** Built-in K3s cluster with Helm deployments
 - **Secure:** Credentials management via Jenkins Configuration as Code
 - **Observable:** Full build logs and deployment tracking
-- ⚡ **Fast:** ~15 minute infrastructure deployment
+- **Fast:** ~15 minute infrastructure deployment
 
 ## Quick Start
 
