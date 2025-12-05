@@ -13,7 +13,7 @@
 
 ---
 
-## 📖 Overview
+## Overview
 
 **Whanos** is a powerful DevOps infrastructure that combines Ansible, Jenkins, Docker, and Kubernetes to provide automated application deployment. Simply push your code to a Git repository, and Whanos handles the rest:
 
@@ -24,7 +24,7 @@
 
 Perfect for teams wanting **GitOps-style automation** without complex CI/CD setup.
 
-## ✨ Features
+## **Features**
 
 - **Multi-language Support:** Python, JavaScript, Java, C, Befunge
 - **Automatic Detection:** Recognizes technology from repository structure
@@ -314,8 +314,6 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 <div align="center">
 
-**Ready to deploy?** Start with the **[User Guide](docs/USER_GUIDE.md)** 🚀
-
-Made with ❤️ for automated DevOps
+**Ready to deploy?** Start with the **[User Guide](docs/USER_GUIDE.md)** 
 
 </div>
